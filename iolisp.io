@@ -267,9 +267,78 @@ subrCons := Object clone
 subrCons call := method(args,
   makeCons(safeCar(args), safeCar(safeCdr(args))))
 
+subrEq := Object clone
+subrEq call := method(args,
+  x := safeCar(args)
+  y := safeCar(safeCdr(args))
+  if (x tag == "num" and y tag == "num",
+    if (x data == y data,
+      return makeSym("t"),
+      return kNil))
+  if (x == y,
+    return makeSym("t"),
+    return kNil))
+
+subrAtom := Object clone
+subrAtom call := method(args,
+  if (safeCar(args) tag == "cons",
+    kNil,
+    makeSym("t")))
+
+subrNumberp := Object clone
+subrNumberp call := method(args,
+  if (safeCar(args) tag == "num",
+    makeSym("t"),
+    kNil))
+
+subrSymbolp := Object clone
+subrSymbolp call := method(args,
+  if (safeCar(args) tag == "sym",
+    makeSym("t"),
+    kNil))
+
+subrAddOrMul := Object clone
+subrAddOrMul call := method(args,
+  ret := init_val_
+  while (args tag == "cons",
+    if (args car tag != "num",
+      return makeError("wrong type"))
+    ret := fn_(ret, args car data)
+    args := args cdr)
+  makeNum(ret))
+subrAdd := subrAddOrMul clone
+subrAdd init_val_ := 0
+subrAdd fn_ := method(x, y, x + y)
+subrMul := subrAddOrMul clone
+subrMul init_val_ := 1
+subrMul fn_ := method(x, y, x * y)
+
+subrSubOrDivOrMod := Object clone
+subrSubOrDivOrMod call := method(args,
+  x := safeCar(args)
+  y := safeCar(safeCdr(args))
+  if (x tag != "num" or y tag != "num",
+    return makeError("wrong type"))
+  makeNum(fn_(x data, y data)))
+subrSub := subrSubOrDivOrMod clone
+subrSub fn_ := method(x, y, x - y)
+subrDiv := subrSubOrDivOrMod clone
+subrDiv fn_ := method(x, y, x / y)
+subrMod := subrSubOrDivOrMod clone
+subrMod fn_ := method(x, y, x % y)
+
 addToEnv(makeSym("car"), makeSubr(subrCar), g_env)
 addToEnv(makeSym("cdr"), makeSubr(subrCdr), g_env)
 addToEnv(makeSym("cons"), makeSubr(subrCons), g_env)
+addToEnv(makeSym("eq"), makeSubr(subrEq), g_env)
+addToEnv(makeSym("atom"), makeSubr(subrAtom), g_env)
+addToEnv(makeSym("numberp"), makeSubr(subrNumberp), g_env)
+addToEnv(makeSym("symbolp"), makeSubr(subrSymbolp), g_env)
+addToEnv(makeSym("+"), makeSubr(subrAdd), g_env)
+addToEnv(makeSym("*"), makeSubr(subrMul), g_env)
+addToEnv(makeSym("-"), makeSubr(subrSub), g_env)
+addToEnv(makeSym("/"), makeSubr(subrDiv), g_env)
+addToEnv(makeSym("mod"), makeSubr(subrMod), g_env)
 addToEnv(makeSym("t"), makeSym("t"), g_env)
 
 write("> ")
