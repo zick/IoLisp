@@ -62,6 +62,14 @@ nreverse := method(lst,
     lst := tmp)
   ret)
 
+pairlis := method(lst1, lst2,
+  ret := kNil
+  while (lst1 tag == "cons" and lst2 tag == "cons",
+    ret := makeCons(makeCons(lst1 car, lst2 car), ret)
+    lst1 := lst1 cdr
+    lst2 := lst2 cdr)
+  nreverse(ret))
+
 isSpace := method(c,
   c == 0x09 or c == 0x0a or c == 0x0d or c == 0x20)  // '\t', '\r', '\n', ' '
 
@@ -202,6 +210,8 @@ eval := method(obj, env,
     if (eval(safeCar(args), env) == kNil,
       return eval(safeCar(safeCdr(safeCdr(args))), env),
       return eval(safeCar(safeCdr(args)), env)))
+  if (op == makeSym("lambda"),
+    return makeExpr(args, env))
   apply(eval(op, env), evlis(args, env), env))
 
 evlis := method(lst, env,
@@ -214,6 +224,13 @@ evlis := method(lst, env,
     lst := lst cdr)
   nreverse(ret))
 
+progn := method(body, env,
+  ret := kNil
+  while (body tag == "cons",
+    ret := eval(body car, env)
+    body := body cdr)
+  ret)
+
 apply := method(fn, args, env,
   if (fn tag == "error",
     return fn)
@@ -221,7 +238,9 @@ apply := method(fn, args, env,
     return args)
   if (fn tag == "subr",
     return fn data call(args))
-  makeError("noimpl"))
+  if (fn tag == "expr",
+    return progn(fn body, makeCons(pairlis(fn args, args), fn env)))
+  makeError(printObj(fn) with(" is not function")))
 
 subrCar := Object clone
 subrCar call := method(args,
