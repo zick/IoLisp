@@ -212,6 +212,11 @@ eval := method(obj, env,
       return eval(safeCar(safeCdr(args)), env)))
   if (op == makeSym("lambda"),
     return makeExpr(args, env))
+  if (op == makeSym("defun"),
+    expr := makeExpr(safeCdr(args), env)
+    sym := safeCar(args)
+    addToEnv(sym, expr, g_env)
+    return sym)
   apply(eval(op, env), evlis(args, env), env))
 
 evlis := method(lst, env,
