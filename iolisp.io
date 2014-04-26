@@ -194,8 +194,50 @@ eval := method(obj, env,
     if (bind == kNil,
       return makeError(obj data with(" has no value")),
       return bind cdr))
-  return makeError("noimpl"))
+  op := safeCar(obj)
+  args := safeCdr(obj)
+  if (op == makeSym("quote"),
+    return safeCar(args))
+  if (op == makeSym("if"),
+    if (eval(safeCar(args), env) == kNil,
+      return eval(safeCar(safeCdr(safeCdr(args))), env),
+      return eval(safeCar(safeCdr(args)), env)))
+  apply(eval(op, env), evlis(args, env), env))
 
+evlis := method(lst, env,
+  ret := kNil
+  while (lst tag == "cons",
+    elm := eval(lst car, env)
+    if (elm tag == "error",
+      return elm)
+    ret := makeCons(elm, ret)
+    lst := lst cdr)
+  nreverse(ret))
+
+apply := method(fn, args, env,
+  if (fn tag == "error",
+    return fn)
+  if (args tag == "error",
+    return args)
+  if (fn tag == "subr",
+    return fn data call(args))
+  makeError("noimpl"))
+
+subrCar := Object clone
+subrCar call := method(args,
+  safeCar(safeCar(args)))
+
+subrCdr := Object clone
+subrCdr call := method(args,
+  safeCdr(safeCar(args)))
+
+subrCons := Object clone
+subrCons call := method(args,
+  makeCons(safeCar(args), safeCar(safeCdr(args))))
+
+addToEnv(makeSym("car"), makeSubr(subrCar), g_env)
+addToEnv(makeSym("cdr"), makeSubr(subrCdr), g_env)
+addToEnv(makeSym("cons"), makeSubr(subrCons), g_env)
 addToEnv(makeSym("t"), makeSym("t"), g_env)
 
 write("> ")
