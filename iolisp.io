@@ -170,7 +170,35 @@ printList := method(obj,
     "(" with(ret, ")"),
     "(" with(ret, " . ", printObj(obj), ")")))
 
+findVar := method(sym, env,
+  while (env tag == "cons",
+    alist := env car
+    while (alist tag == "cons",
+      if (alist car car == sym,
+        return alist car)
+      alist := alist cdr)
+    env := env cdr)
+  return kNil)
+
+g_env := makeCons(kNil, kNil)
+
+addToEnv := method(sym, val, env,
+  env car := makeCons(makeCons(sym, val), env car))
+
+eval := method(obj, env,
+  tag := obj tag
+  if (tag == "nil" or tag == "num" or tag == "error",
+    return obj)
+  if (tag == "sym",
+    bind := findVar(obj, env)
+    if (bind == kNil,
+      return makeError(obj data with(" has no value")),
+      return bind cdr))
+  return makeError("noimpl"))
+
+addToEnv(makeSym("t"), makeSym("t"), g_env)
+
 write("> ")
 while (line := File standardInput readLine,
-  writeln(printObj(read(line) at(0)))
+  writeln(printObj(eval(read(line) at(0), g_env)))
   write("> "))
