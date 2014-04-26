@@ -39,7 +39,8 @@ makeCons := method(a, d,
   cell := LObj clone
   cell tag := "cons"
   cell car := a
-  cell cdr := d)
+  cell cdr := d
+  cell)
 
 makeSubr := method(fn,
   makeLObj("subr", fn))
@@ -49,7 +50,17 @@ makeExpr := method(args, env,
   expr tag := "expr"
   expr args := safeCar(args)
   expr body := safeCdr(args)
-  expr env := env)
+  expr env := env
+  expr)
+
+nreverse := method(lst,
+  ret := kNil
+  while (lst tag == "cons",
+    tmp := lst cdr
+    lst cdr := ret
+    ret := lst
+    lst := tmp)
+  ret)
 
 isSpace := method(c,
   c == 0x09 or c == 0x0a or c == 0x0d or c == 0x20)  // '\t', '\r', '\n', ' '
@@ -108,12 +119,58 @@ read := method(str,
   if (c == kRPar,
     return list(makeError("invalid syntax: " with(str)), ""))
   if (c == kLPar,
-    return list(makeError("noimpl"), ""))
+    return readList(str exSlice(1)))
   if (c == kQuote,
-    return list(makeError("noimpl"), ""))
+    tmp := read(str exSlice(1))
+    return list(makeCons(makeSym("quote"), makeCons(tmp at(0), kNil)),
+                tmp at(1)))
   return readAtom(str))
+
+readList := method(str,
+  ret := kNil
+  while (true,
+    str := skipSpaces(str)
+    if (str size == 0,
+      return list(makeError("unfinished parenthesis"), ""))
+    if (str at(0) == kRPar,
+      break)
+    tmp := read(str)
+    elm := tmp at(0)
+    next := tmp at(1)
+    if (elm tag == "error",
+      return list(elm, ""))
+    ret := makeCons(elm, ret)
+    str := next)
+  list(nreverse(ret), str exSlice(1)))
+
+printObj := method(obj,
+  tag := obj tag
+  if (tag == "num" or tag == "sym" or tag == "nil",
+    return obj data asString)
+  if (tag == "error",
+    return "<error: " with(obj data, ">"))
+  if (tag == "cons",
+    return printList(obj))
+  if (tag == "subr" or tag == "expr",
+    return "<" with(tag, ">"))
+  return "<unknown>")
+
+printList := method(obj,
+  ret := ""
+  first := true
+  while (obj tag == "cons",
+    if (first,
+      // then
+      ret := printObj(obj car)
+      first = false,
+      // else
+      ret := ret with(" ", printObj(obj car)))
+    obj := obj cdr)
+  if (obj == kNil,
+    "(" with(ret, ")"),
+    "(" with(ret, " . ", printObj(obj), ")")))
 
 write("> ")
 while (line := File standardInput readLine,
-  writeln(read(line) at(0))
+  writeln(printObj(read(line) at(0)))
   write("> "))
