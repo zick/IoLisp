@@ -32,6 +32,13 @@ makeSym := method(str,
     sym_table atPut(str, makeLObj("sym", str)))
   sym_table at(str))
 
+sym_t := makeSym("t")
+sym_quote := makeSym("quote")
+sym_if := makeSym("if")
+sym_lambda := makeSym("lambda")
+sym_defun := makeSym("defun")
+sym_setq := makeSym("setq")
+
 makeNum := method(num,
   makeLObj("num", num))
 
@@ -130,7 +137,7 @@ read := method(str,
     return readList(str exSlice(1)))
   if (c == kQuote,
     tmp := read(str exSlice(1))
-    return list(makeCons(makeSym("quote"), makeCons(tmp at(0), kNil)),
+    return list(makeCons(sym_quote, makeCons(tmp at(0), kNil)),
                 tmp at(1)))
   return readAtom(str))
 
@@ -204,20 +211,20 @@ eval := method(obj, env,
       return bind cdr))
   op := safeCar(obj)
   args := safeCdr(obj)
-  if (op == makeSym("quote"),
+  if (op == sym_quote,
     return safeCar(args))
-  if (op == makeSym("if"),
+  if (op == sym_if,
     if (eval(safeCar(args), env) == kNil,
       return eval(safeCar(safeCdr(safeCdr(args))), env),
       return eval(safeCar(safeCdr(args)), env)))
-  if (op == makeSym("lambda"),
+  if (op == sym_lambda,
     return makeExpr(args, env))
-  if (op == makeSym("defun"),
+  if (op == sym_defun,
     expr := makeExpr(safeCdr(args), env)
     sym := safeCar(args)
     addToEnv(sym, expr, g_env)
     return sym)
-  if (op == makeSym("setq"),
+  if (op == sym_setq,
     val := eval(safeCar(safeCdr(args)), env)
     sym := safeCar(args)
     bind := findVar(sym, env)
@@ -273,28 +280,28 @@ subrEq call := method(args,
   y := safeCar(safeCdr(args))
   if (x tag == "num" and y tag == "num",
     if (x data == y data,
-      return makeSym("t"),
+      return sym_t,
       return kNil))
   if (x == y,
-    return makeSym("t"),
+    return sym_t,
     return kNil))
 
 subrAtom := Object clone
 subrAtom call := method(args,
   if (safeCar(args) tag == "cons",
     kNil,
-    makeSym("t")))
+    sym_t))
 
 subrNumberp := Object clone
 subrNumberp call := method(args,
   if (safeCar(args) tag == "num",
-    makeSym("t"),
+    sym_t,
     kNil))
 
 subrSymbolp := Object clone
 subrSymbolp call := method(args,
   if (safeCar(args) tag == "sym",
-    makeSym("t"),
+    sym_t,
     kNil))
 
 subrAddOrMul := Object clone
@@ -339,7 +346,7 @@ addToEnv(makeSym("*"), makeSubr(subrMul), g_env)
 addToEnv(makeSym("-"), makeSubr(subrSub), g_env)
 addToEnv(makeSym("/"), makeSubr(subrDiv), g_env)
 addToEnv(makeSym("mod"), makeSubr(subrMod), g_env)
-addToEnv(makeSym("t"), makeSym("t"), g_env)
+addToEnv(sym_t, sym_t, g_env)
 
 write("> ")
 while (line := File standardInput readLine,
