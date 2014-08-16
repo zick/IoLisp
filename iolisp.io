@@ -38,6 +38,9 @@ sym_if := makeSym("if")
 sym_lambda := makeSym("lambda")
 sym_defun := makeSym("defun")
 sym_setq := makeSym("setq")
+sym_loop := makeSym("loop")
+sym_return := makeSym("return")
+loop_val := kNil
 
 makeNum := method(num,
   makeLObj("num", num))
@@ -214,7 +217,10 @@ eval := method(obj, env,
   if (op == sym_quote,
     return safeCar(args))
   if (op == sym_if,
-    if (eval(safeCar(args), env) == kNil,
+    c := eval(safeCar(args), env)
+    if (c tag == "error",
+      return c)
+    if (c == kNil,
       return eval(safeCar(safeCdr(safeCdr(args))), env),
       return eval(safeCar(safeCdr(args)), env)))
   if (op == sym_lambda,
@@ -226,12 +232,19 @@ eval := method(obj, env,
     return sym)
   if (op == sym_setq,
     val := eval(safeCar(safeCdr(args)), env)
+    if (val tag == "error",
+      return val)
     sym := safeCar(args)
     bind := findVar(sym, env)
     if (bind == kNil,
       addToEnv(sym, val, g_env),
       bind cdr := val)
     return val)
+  if (op == sym_loop,
+    return loop1(args, env))
+  if (op == sym_return,
+    loop_val = eval(safeCar(args), env)
+    return makeError(""))
   apply(eval(op, env), evlis(args, env), env))
 
 evlis := method(lst, env,
@@ -248,8 +261,18 @@ progn := method(body, env,
   ret := kNil
   while (body tag == "cons",
     ret := eval(body car, env)
+    if (ret tag == "error",
+      return ret)
     body := body cdr)
   ret)
+
+loop1 := method(body, env,
+  while (true,
+    ret := progn(body, env)
+    if (ret tag == "error",
+      if (ret data == "",
+        return loop_val,
+        return ret))))
 
 apply := method(fn, args, env,
   if (fn tag == "error",
